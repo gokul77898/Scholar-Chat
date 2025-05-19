@@ -193,12 +193,14 @@ const HomePage: FC = () => {
             className="w-full sm:max-w-md md:max-w-lg lg:max-w-xl flex flex-col p-0 border-l shadow-2xl bg-background"
             onOpenAutoFocus={(e) => e.preventDefault()}
         >
-          <ChatWindow
-            messages={chatMessages}
-            onSendMessage={handleSendMessage}
-            isChatting={isChatting}
-            paperText={paperText}
-          />
+          {paperText && (
+            <ChatWindow
+              messages={chatMessages}
+              onSendMessage={handleSendMessage}
+              isChatting={isChatting}
+              paperText={paperText}
+            />
+          )}
         </SheetContent>
       </Sheet>
     </div>
