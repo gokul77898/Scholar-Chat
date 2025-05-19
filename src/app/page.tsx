@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, type FC } from 'react';
+import { useState, type FC, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
@@ -30,15 +30,22 @@ const HomePage: FC = () => {
   const { toast } = useToast();
 
   const handleProcessPaper = async (text: string, complexity: string, language: string) => {
+    if (!text.trim()) {
+      toast({
+        title: "Error",
+        description: "Paper content cannot be empty.",
+        variant: "destructive",
+      });
+      return;
+    }
     setIsSummarizing(true);
-    setIsExtractingKeywords(true);
+    setIsExtractingKeywords(true); // Start both loading states
     setPaperText(text); 
-    setSummaryText(null);
-    setKeywords(null);
-    setChatMessages([]);
+    setSummaryText(null); // Clear previous summary
+    setKeywords(null);   // Clear previous keywords
+    setChatMessages([]); // Clear chat related to old paper
 
-    let summarySuccess = false;
-
+    // Summarization
     try {
       const summaryResult = await summarizeResearchPaper({
         paperText: text,
@@ -46,52 +53,48 @@ const HomePage: FC = () => {
         language: language,
       });
       setSummaryText(summaryResult.summary);
-      summarySuccess = true;
       toast({
         title: "Summary Generated!",
         description: "The paper has been summarized successfully.",
       });
     } catch (error) {
       console.error("Error summarizing paper:", error);
+      setSummaryText("Failed to generate summary."); // Show error in display
       toast({
         title: "Summarization Failed",
         description: "Could not summarize the paper. Please try again.",
         variant: "destructive",
       });
-      setPaperText(null); // Reset paper text if summarization fails
     } finally {
       setIsSummarizing(false);
     }
 
-    if (summarySuccess && text) { // Only extract keywords if summarization was successful and text exists
-      try {
-        const keywordResult = await extractKeywords({ paperText: text });
-        setKeywords(keywordResult.keywords);
-        if (keywordResult.keywords.length > 0) {
-            toast({
-            title: "Keywords Extracted!",
-            description: "Relevant keywords have been identified.",
-            });
-        } else {
-            toast({
-            title: "No Keywords Found",
-            description: "Could not extract distinct keywords from this paper.",
-            variant: "default" 
-            });
-        }
-      } catch (error) {
-        console.error("Error extracting keywords:", error);
-        setKeywords([]); // Set to empty array on error
-        toast({
-          title: "Keyword Extraction Failed",
-          description: "Could not extract keywords from the paper.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsExtractingKeywords(false);
+    // Keyword Extraction (runs after summarization attempt, regardless of its success for now, but could be conditional)
+    try {
+      const keywordResult = await extractKeywords({ paperText: text });
+      setKeywords(keywordResult.keywords);
+      if (keywordResult.keywords.length > 0) {
+          toast({
+          title: "Keywords Extracted!",
+          description: "Relevant keywords have been identified.",
+          });
+      } else {
+          toast({
+          title: "No Keywords Found",
+          description: "Could not extract distinct keywords from this paper.",
+          variant: "default" 
+          });
       }
-    } else {
-        setIsExtractingKeywords(false); // Ensure this is false if summarization failed
+    } catch (error) {
+      console.error("Error extracting keywords:", error);
+      setKeywords([]); // Set to empty array on error to signify extraction happened but failed or found none
+      toast({
+        title: "Keyword Extraction Failed",
+        description: "Could not extract keywords from the paper.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExtractingKeywords(false);
     }
   };
 
@@ -143,12 +146,13 @@ const HomePage: FC = () => {
     setIsSummarizing(false);
     setIsExtractingKeywords(false);
     setIsChatting(false);
-    // The PaperUploadArea will clear its internal text via useEffect hook watching hasPaper
     toast({
       title: "Cleared",
       description: "All content has been cleared.",
     });
   };
+  
+  const isLoadingContent = isSummarizing || isExtractingKeywords;
 
   return (
     <div className="relative min-h-screen bg-background text-foreground flex flex-col">
@@ -157,7 +161,7 @@ const HomePage: FC = () => {
         <div className="space-y-8">
           <PaperUploadArea 
             onSummarize={handleProcessPaper} 
-            isSummarizing={isSummarizing || isExtractingKeywords} // Combined loading state for button
+            isSummarizing={isLoadingContent} 
             onClearAll={handleClearAll}
             hasPaper={!!paperText}
           />
@@ -165,8 +169,8 @@ const HomePage: FC = () => {
             originalText={paperText} 
             summaryText={summaryText} 
             keywords={keywords}
-            isSummarizing={isSummarizing}
-            isExtractingKeywords={isExtractingKeywords}
+            isSummarizing={isSummarizing} // Pass individual loading states
+            isExtractingKeywords={isExtractingKeywords} // Pass individual loading states
           />
         </div>
       </div>
@@ -178,17 +182,17 @@ const HomePage: FC = () => {
             size="icon"
             className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50 rounded-full w-16 h-16 shadow-xl hover:scale-105 transition-transform"
             aria-label="Toggle Chat Window"
-            disabled={!paperText} // Disable chat button if no paper is loaded
+            disabled={!paperText || isLoadingContent} // Disable chat if no paper or if content is loading
           >
             <Bot size={32} />
           </Button>
         </SheetTrigger>
         <SheetContent 
             side="right" 
-            className="w-full sm:max-w-md md:max-w-lg lg:max-w-xl flex flex-col p-0 border-l shadow-2xl bg-background" // Added bg-background
+            className="w-full sm:max-w-md md:max-w-lg lg:max-w-xl flex flex-col p-0 border-l shadow-2xl bg-background"
             onOpenAutoFocus={(e) => e.preventDefault()}
         >
-          {isChatOpen && (
+          {isChatOpen && ( // Conditionally render ChatWindow only when sheet is open to ensure fresh state if needed
             <ChatWindow
               messages={chatMessages}
               onSendMessage={handleSendMessage}
