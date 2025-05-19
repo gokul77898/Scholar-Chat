@@ -179,7 +179,7 @@ const HomePage: FC = () => {
       <Sheet open={isChatOpen} onOpenChange={setIsChatOpen}>
         <SheetTrigger asChild>
           <Button
-            variant="default" // Changed from "primary" to "default"
+            variant="default"
             size="icon"
             className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50 rounded-full w-16 h-16 shadow-xl hover:scale-105 transition-transform"
             aria-label="Toggle Chat Window"
@@ -193,14 +193,12 @@ const HomePage: FC = () => {
             className="w-full sm:max-w-md md:max-w-lg lg:max-w-xl flex flex-col p-0 border-l shadow-2xl bg-background"
             onOpenAutoFocus={(e) => e.preventDefault()}
         >
-          {isChatOpen && ( 
-            <ChatWindow
-              messages={chatMessages}
-              onSendMessage={handleSendMessage}
-              isChatting={isChatting}
-              paperText={paperText}
-            />
-          )}
+          <ChatWindow
+            messages={chatMessages}
+            onSendMessage={handleSendMessage}
+            isChatting={isChatting}
+            paperText={paperText}
+          />
         </SheetContent>
       </Sheet>
     </div>
