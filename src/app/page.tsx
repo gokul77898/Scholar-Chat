@@ -39,13 +39,13 @@ const HomePage: FC = () => {
       return;
     }
     setIsSummarizing(true);
-    setIsExtractingKeywords(true); // Start both loading states
+    setIsExtractingKeywords(true); 
     setPaperText(text); 
-    setSummaryText(null); // Clear previous summary
-    setKeywords(null);   // Clear previous keywords
-    setChatMessages([]); // Clear chat related to old paper
+    setSummaryText(null); 
+    setKeywords(null);   
+    setChatMessages([]); 
 
-    // Summarization
+    
     try {
       const summaryResult = await summarizeResearchPaper({
         paperText: text,
@@ -59,7 +59,7 @@ const HomePage: FC = () => {
       });
     } catch (error) {
       console.error("Error summarizing paper:", error);
-      setSummaryText("Failed to generate summary."); // Show error in display
+      setSummaryText("Failed to generate summary."); 
       toast({
         title: "Summarization Failed",
         description: "Could not summarize the paper. Please try again.",
@@ -69,7 +69,7 @@ const HomePage: FC = () => {
       setIsSummarizing(false);
     }
 
-    // Keyword Extraction (runs after summarization attempt, regardless of its success for now, but could be conditional)
+    
     try {
       const keywordResult = await extractKeywords({ paperText: text });
       setKeywords(keywordResult.keywords);
@@ -87,7 +87,7 @@ const HomePage: FC = () => {
       }
     } catch (error) {
       console.error("Error extracting keywords:", error);
-      setKeywords([]); // Set to empty array on error to signify extraction happened but failed or found none
+      setKeywords([]); 
       toast({
         title: "Keyword Extraction Failed",
         description: "Could not extract keywords from the paper.",
@@ -146,6 +146,7 @@ const HomePage: FC = () => {
     setIsSummarizing(false);
     setIsExtractingKeywords(false);
     setIsChatting(false);
+    setIsChatOpen(false); // Close chat window if open
     toast({
       title: "Cleared",
       description: "All content has been cleared.",
@@ -169,8 +170,8 @@ const HomePage: FC = () => {
             originalText={paperText} 
             summaryText={summaryText} 
             keywords={keywords}
-            isSummarizing={isSummarizing} // Pass individual loading states
-            isExtractingKeywords={isExtractingKeywords} // Pass individual loading states
+            isSummarizing={isSummarizing} 
+            isExtractingKeywords={isExtractingKeywords} 
           />
         </div>
       </div>
@@ -178,11 +179,11 @@ const HomePage: FC = () => {
       <Sheet open={isChatOpen} onOpenChange={setIsChatOpen}>
         <SheetTrigger asChild>
           <Button
-            variant="primary"
+            variant="default" // Changed from "primary" to "default"
             size="icon"
             className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50 rounded-full w-16 h-16 shadow-xl hover:scale-105 transition-transform"
             aria-label="Toggle Chat Window"
-            disabled={!paperText || isLoadingContent} // Disable chat if no paper or if content is loading
+            disabled={!paperText || isLoadingContent} 
           >
             <Bot size={32} />
           </Button>
@@ -192,7 +193,7 @@ const HomePage: FC = () => {
             className="w-full sm:max-w-md md:max-w-lg lg:max-w-xl flex flex-col p-0 border-l shadow-2xl bg-background"
             onOpenAutoFocus={(e) => e.preventDefault()}
         >
-          {isChatOpen && ( // Conditionally render ChatWindow only when sheet is open to ensure fresh state if needed
+          {isChatOpen && ( 
             <ChatWindow
               messages={chatMessages}
               onSendMessage={handleSendMessage}
