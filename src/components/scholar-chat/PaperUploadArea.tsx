@@ -2,28 +2,42 @@
 "use client";
 
 import type { FC } from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Wand2, Loader2 } from 'lucide-react';
+import { Wand2, Loader2, Trash2 } from 'lucide-react';
 
 interface PaperUploadAreaProps {
   onSummarize: (text: string, complexity: string, language: string) => Promise<void>;
   isSummarizing: boolean;
+  onClearAll: () => void;
+  hasPaper: boolean; // To know if there's content to clear from the parent's perspective
 }
 
-const PaperUploadArea: FC<PaperUploadAreaProps> = ({ onSummarize, isSummarizing }) => {
+const PaperUploadArea: FC<PaperUploadAreaProps> = ({ onSummarize, isSummarizing, onClearAll, hasPaper }) => {
   const [paperText, setPaperText] = useState('');
   const [complexity, setComplexity] = useState('simple');
   const [language, setLanguage] = useState('English');
+
+  useEffect(() => {
+    // If the parent indicates no paper is loaded (e.g., after a global clear), clear local textarea
+    if (!hasPaper && paperText !== '') {
+      setPaperText('');
+    }
+  }, [hasPaper, paperText]);
 
   const handleSubmit = () => {
     if (paperText.trim()) {
       onSummarize(paperText, complexity, language);
     }
+  };
+
+  const handleClear = () => {
+    setPaperText(''); // Clear local textarea
+    onClearAll(); // Trigger parent clear logic
   };
 
   return (
@@ -73,18 +87,27 @@ const PaperUploadArea: FC<PaperUploadAreaProps> = ({ onSummarize, isSummarizing 
           </div>
         </div>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex flex-col sm:flex-row justify-between items-center gap-2">
         <Button
           onClick={handleSubmit}
           disabled={isSummarizing || !paperText.trim()}
-          className="w-full md:w-auto"
+          className="w-full sm:w-auto"
         >
           {isSummarizing ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
             <Wand2 className="mr-2 h-4 w-4" />
           )}
-          Summarize Paper
+          Summarize & Extract Keywords
+        </Button>
+        <Button
+          variant="outline"
+          onClick={handleClear}
+          disabled={isSummarizing || (!hasPaper && !paperText.trim())}
+          className="w-full sm:w-auto"
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          Clear All
         </Button>
       </CardFooter>
     </Card>

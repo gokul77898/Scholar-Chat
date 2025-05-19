@@ -5,7 +5,7 @@ import { useState, type FC } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
-import { Bot, Loader2 } from 'lucide-react';
+import { Bot } from 'lucide-react';
 
 import ScholarChatHeader from '@/components/scholar-chat/ScholarChatHeader';
 import PaperUploadArea from '@/components/scholar-chat/PaperUploadArea';
@@ -14,29 +14,39 @@ import ChatWindow, { type ChatMessage } from '@/components/scholar-chat/ChatWind
 
 import { summarizeResearchPaper } from '@/ai/flows/summarize-research-paper';
 import { answerQuestionsAboutPaper } from '@/ai/flows/answer-questions-about-paper-flow';
+import { extractKeywords } from '@/ai/flows/extract-keywords-flow';
 
 const HomePage: FC = () => {
   const [paperText, setPaperText] = useState<string | null>(null);
   const [summaryText, setSummaryText] = useState<string | null>(null);
+  const [keywords, setKeywords] = useState<string[] | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [isExtractingKeywords, setIsExtractingKeywords] = useState(false);
   const [isChatting, setIsChatting] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   const { toast } = useToast();
 
-  const handleSummarize = async (text: string, complexity: string, language: string) => {
+  const handleProcessPaper = async (text: string, complexity: string, language: string) => {
     setIsSummarizing(true);
+    setIsExtractingKeywords(true);
     setPaperText(text); 
-    setSummaryText(null); // Clear previous summary
-    setChatMessages([]); // Clear chat history for new paper
+    setSummaryText(null);
+    setKeywords(null);
+    setChatMessages([]);
+
+    let summarySuccess = false;
+
     try {
-      const result = await summarizeResearchPaper({
+      const summaryResult = await summarizeResearchPaper({
         paperText: text,
         complexity: complexity,
         language: language,
       });
-      setSummaryText(result.summary);
+      setSummaryText(summaryResult.summary);
+      summarySuccess = true;
       toast({
         title: "Summary Generated!",
         description: "The paper has been summarized successfully.",
@@ -52,13 +62,44 @@ const HomePage: FC = () => {
     } finally {
       setIsSummarizing(false);
     }
+
+    if (summarySuccess && text) { // Only extract keywords if summarization was successful and text exists
+      try {
+        const keywordResult = await extractKeywords({ paperText: text });
+        setKeywords(keywordResult.keywords);
+        if (keywordResult.keywords.length > 0) {
+            toast({
+            title: "Keywords Extracted!",
+            description: "Relevant keywords have been identified.",
+            });
+        } else {
+            toast({
+            title: "No Keywords Found",
+            description: "Could not extract distinct keywords from this paper.",
+            variant: "default" 
+            });
+        }
+      } catch (error) {
+        console.error("Error extracting keywords:", error);
+        setKeywords([]); // Set to empty array on error
+        toast({
+          title: "Keyword Extraction Failed",
+          description: "Could not extract keywords from the paper.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsExtractingKeywords(false);
+      }
+    } else {
+        setIsExtractingKeywords(false); // Ensure this is false if summarization failed
+    }
   };
 
-  const handleSendMessage = async (message: string) => {
+  const handleSendMessage = async (message: string, eli5: boolean) => {
     if (!paperText) {
       toast({
         title: "No Paper Loaded",
-        description: "Please upload and summarize a paper first.",
+        description: "Please upload and process a paper first.",
         variant: "destructive",
       });
       return;
@@ -72,6 +113,7 @@ const HomePage: FC = () => {
       const result = await answerQuestionsAboutPaper({
         paperText: paperText,
         question: message,
+        eli5: eli5,
       });
       const aiResponse: ChatMessage = { id: Date.now().toString() + '-ai', sender: 'ai', text: result.answer };
       setChatMessages((prev) => [...prev, aiResponse]);
@@ -93,13 +135,39 @@ const HomePage: FC = () => {
     }
   };
 
+  const handleClearAll = () => {
+    setPaperText(null);
+    setSummaryText(null);
+    setKeywords(null);
+    setChatMessages([]);
+    setIsSummarizing(false);
+    setIsExtractingKeywords(false);
+    setIsChatting(false);
+    // The PaperUploadArea will clear its internal text via useEffect hook watching hasPaper
+    toast({
+      title: "Cleared",
+      description: "All content has been cleared.",
+    });
+  };
+
   return (
     <div className="relative min-h-screen bg-background text-foreground flex flex-col">
       <div className="container mx-auto px-4 py-8 flex-grow w-full max-w-5xl">
         <ScholarChatHeader />
         <div className="space-y-8">
-          <PaperUploadArea onSummarize={handleSummarize} isSummarizing={isSummarizing} />
-          <PaperDisplay originalText={paperText} summaryText={summaryText} isSummarizing={isSummarizing} />
+          <PaperUploadArea 
+            onSummarize={handleProcessPaper} 
+            isSummarizing={isSummarizing || isExtractingKeywords} // Combined loading state for button
+            onClearAll={handleClearAll}
+            hasPaper={!!paperText}
+          />
+          <PaperDisplay 
+            originalText={paperText} 
+            summaryText={summaryText} 
+            keywords={keywords}
+            isSummarizing={isSummarizing}
+            isExtractingKeywords={isExtractingKeywords}
+          />
         </div>
       </div>
 
@@ -110,16 +178,17 @@ const HomePage: FC = () => {
             size="icon"
             className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50 rounded-full w-16 h-16 shadow-xl hover:scale-105 transition-transform"
             aria-label="Toggle Chat Window"
+            disabled={!paperText} // Disable chat button if no paper is loaded
           >
             <Bot size={32} />
           </Button>
         </SheetTrigger>
         <SheetContent 
             side="right" 
-            className="w-full sm:max-w-md md:max-w-lg lg:max-w-xl flex flex-col p-0 border-l shadow-2xl"
-            onOpenAutoFocus={(e) => e.preventDefault()} // Prevents auto-focusing first element in sheet
+            className="w-full sm:max-w-md md:max-w-lg lg:max-w-xl flex flex-col p-0 border-l shadow-2xl bg-background" // Added bg-background
+            onOpenAutoFocus={(e) => e.preventDefault()}
         >
-          {isChatOpen && ( // Conditionally render ChatWindow to ensure it re-mounts or updates correctly when paperText changes
+          {isChatOpen && (
             <ChatWindow
               messages={chatMessages}
               onSendMessage={handleSendMessage}

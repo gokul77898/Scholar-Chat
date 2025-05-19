@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -14,6 +15,7 @@ import {z} from 'genkit';
 const AnswerQuestionsAboutPaperInputSchema = z.object({
   paperText: z.string().describe('The text content of the research paper.'),
   question: z.string().describe('The question about the research paper.'),
+  eli5: z.boolean().optional().describe('If true, explain the answer in very simple terms, as if talking to a 5-year-old.'),
 });
 export type AnswerQuestionsAboutPaperInput = z.infer<
   typeof AnswerQuestionsAboutPaperInputSchema
@@ -39,10 +41,14 @@ const prompt = ai.definePrompt({
   prompt: `You are a chatbot that answers questions about research papers.
   Use the following research paper to answer the user's question. If the answer is not in the paper, respond with that information.
 
-  Research Paper:
-  {{paperText}}
+  {{#if eli5}}
+  IMPORTANT: Explain your answer in very simple terms, suitable for a 5-year-old. Use simple words, short sentences, and analogies if helpful.
+  {{/if}}
 
-  Question: {{question}}
+  Research Paper:
+  {{{paperText}}}
+
+  Question: {{{question}}}
   `,
 });
 
