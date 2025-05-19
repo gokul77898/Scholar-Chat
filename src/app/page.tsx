@@ -3,34 +3,29 @@
 
 import { useState, type FC, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-// Sheet components are no longer needed as ChatWindow is removed
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
-// Bot icon is no longer needed
-// import { Bot } from 'lucide-react'; 
+import { Bot } from 'lucide-react'; 
 
 import ScholarChatHeader from '@/components/scholar-chat/ScholarChatHeader';
 import PaperUploadArea from '@/components/scholar-chat/PaperUploadArea';
 import PaperDisplay from '@/components/scholar-chat/PaperDisplay';
-// ChatWindow and ChatMessage are no longer needed
-// import ChatWindow, { type ChatMessage } from '@/components/scholar-chat/ChatWindow';
+import ChatWindow, { type ChatMessage } from '@/components/scholar-chat/ChatWindow';
 
 import { summarizeResearchPaper } from '@/ai/flows/summarize-research-paper';
-// answerQuestionsAboutPaper flow is no longer needed
-// import { answerQuestionsAboutPaper } from '@/ai/flows/answer-questions-about-paper-flow';
+import { answerQuestionsAboutPaper } from '@/ai/flows/answer-questions-about-paper-flow';
 import { extractKeywords } from '@/ai/flows/extract-keywords-flow';
 
 const HomePage: FC = () => {
   const [paperText, setPaperText] = useState<string | null>(null);
   const [summaryText, setSummaryText] = useState<string | null>(null);
   const [keywords, setKeywords] = useState<string[] | null>(null);
-  // Chat-related states are removed
-  // const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [isExtractingKeywords, setIsExtractingKeywords] = useState(false);
-  // isChatting and isChatOpen states are removed
-  // const [isChatting, setIsChatting] = useState(false);
-  // const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isChatting, setIsChatting] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const { toast } = useToast();
 
@@ -48,7 +43,7 @@ const HomePage: FC = () => {
     setPaperText(text); 
     setSummaryText(null); 
     setKeywords(null);   
-    // setChatMessages([]); // Chat messages reset removed
+    setChatMessages([]); 
 
     
     try {
@@ -103,8 +98,7 @@ const HomePage: FC = () => {
     }
   };
 
-  // handleSendMessage function is removed
-  /*
+  
   const handleSendMessage = async (message: string, eli5: boolean) => {
     if (!paperText) {
       toast({
@@ -115,7 +109,7 @@ const HomePage: FC = () => {
       return;
     }
 
-    const newUserMessage: ChatMessage = { id: Date.now().toString() + '-user', sender: 'user', text: message };
+    const newUserMessage: ChatMessage = { id: Date.now().toString() + '-user', sender: 'user', text: message, timestamp: new Date() };
     setChatMessages((prev) => [...prev, newUserMessage]);
     setIsChatting(true);
 
@@ -125,7 +119,7 @@ const HomePage: FC = () => {
         question: message,
         eli5: eli5,
       });
-      const aiResponse: ChatMessage = { id: Date.now().toString() + '-ai', sender: 'ai', text: result.answer };
+      const aiResponse: ChatMessage = { id: Date.now().toString() + '-ai', sender: 'ai', text: result.answer, timestamp: new Date() };
       setChatMessages((prev) => [...prev, aiResponse]);
     } catch (error) {
       console.error("Error getting answer:", error);
@@ -133,6 +127,7 @@ const HomePage: FC = () => {
         id: Date.now().toString() + '-error',
         sender: 'ai',
         text: "Sorry, I encountered an error trying to answer your question. Please try again.",
+        timestamp: new Date()
       };
       setChatMessages((prev) => [...prev, errorResponse]);
       toast({
@@ -144,17 +139,17 @@ const HomePage: FC = () => {
       setIsChatting(false);
     }
   };
-  */
+  
 
   const handleClearAll = () => {
     setPaperText(null);
     setSummaryText(null);
     setKeywords(null);
-    // setChatMessages([]); // Chat messages reset removed
+    setChatMessages([]); 
     setIsSummarizing(false);
     setIsExtractingKeywords(false);
-    // setIsChatting(false); // isChatting reset removed
-    // setIsChatOpen(false); // isChatOpen reset removed
+    setIsChatting(false); 
+    setIsChatOpen(false); 
     toast({
       title: "Cleared",
       description: "All content has been cleared.",
@@ -184,8 +179,7 @@ const HomePage: FC = () => {
         </div>
       </div>
 
-      {/* Sheet and ChatWindow components are removed */}
-      {/*
+      
       <Sheet open={isChatOpen} onOpenChange={setIsChatOpen}>
         <SheetTrigger asChild>
           <Button
@@ -203,7 +197,7 @@ const HomePage: FC = () => {
             className="w-full sm:max-w-md md:max-w-lg lg:max-w-xl flex flex-col p-0 border-l shadow-2xl bg-background"
             onOpenAutoFocus={(e) => e.preventDefault()}
         >
-          {paperText && (
+          {paperText && ( // Conditionally render ChatWindow only if paperText exists
             <ChatWindow
               messages={chatMessages}
               onSendMessage={handleSendMessage}
@@ -213,7 +207,7 @@ const HomePage: FC = () => {
           )}
         </SheetContent>
       </Sheet>
-      */}
+      
     </div>
   );
 };
