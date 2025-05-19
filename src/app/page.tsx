@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, type FC } from 'react';
@@ -24,7 +25,7 @@ const HomePage: FC = () => {
 
   const { toast } = useToast();
 
-  const handleSummarize = async (text: string) => {
+  const handleSummarize = async (text: string, complexity: string, language: string) => {
     setIsSummarizing(true);
     setPaperText(text); 
     setSummaryText(null); // Clear previous summary
@@ -32,8 +33,8 @@ const HomePage: FC = () => {
     try {
       const result = await summarizeResearchPaper({
         paperText: text,
-        complexity: 'simple', // Or make this configurable
-        language: 'English',   // Or make this configurable
+        complexity: complexity,
+        language: language,
       });
       setSummaryText(result.summary);
       toast({
